@@ -4,13 +4,10 @@
 
 using System;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.EditAndContinue;
 using Microsoft.CodeAnalysis.Host;
-using Microsoft.CodeAnalysis.PooledObjects;
-using Microsoft.CodeAnalysis.Text;
 using Microsoft.VisualStudio.Debugger.Contracts.EditAndContinue;
 using Roslyn.Utilities;
 
@@ -20,7 +17,10 @@ namespace Microsoft.CodeAnalysis.ExternalAccess.Watch.Api
     {
         private sealed class DebuggerService : IManagedEditAndContinueDebuggerService
         {
-            public static readonly DebuggerService Instance = new();
+            private readonly Task<ImmutableArray<string>> _getCapabilitiesTask;
+
+            public DebuggerService(Task<ImmutableArray<string>> getCapabilitiesTask)
+                => _getCapabilitiesTask = getCapabilitiesTask;
 
             public Task<ImmutableArray<ManagedActiveStatementDebugInfo>> GetActiveStatementsAsync(CancellationToken cancellationToken)
                 => Task.FromResult(ImmutableArray<ManagedActiveStatementDebugInfo>.Empty);
@@ -28,8 +28,7 @@ namespace Microsoft.CodeAnalysis.ExternalAccess.Watch.Api
             public Task<ManagedEditAndContinueAvailability> GetAvailabilityAsync(Guid module, CancellationToken cancellationToken)
                 => Task.FromResult(new ManagedEditAndContinueAvailability(ManagedEditAndContinueAvailabilityStatus.Available));
 
-            public Task<ImmutableArray<string>> GetCapabilitiesAsync(CancellationToken cancellationToken)
-                => Task.FromResult(ImmutableArray.Create("Baseline", "AddDefinitionToExistingType", "NewTypeDefinition"));
+            public Task<ImmutableArray<string>> GetCapabilitiesAsync(CancellationToken cancellationToken) => _getCapabilitiesTask;
 
             public Task PrepareModuleForUpdateAsync(Guid module, CancellationToken cancellationToken)
                 => Task.CompletedTask;
@@ -55,9 +54,10 @@ namespace Microsoft.CodeAnalysis.ExternalAccess.Watch.Api
             (_, _, _) => ValueTaskFactory.FromResult(ImmutableArray<ActiveStatementSpan>.Empty);
 
         private readonly IEditAndContinueWorkspaceService _encService;
+        private readonly Task<ImmutableArray<string>> _getCapabilitiesTask;
 
-        public WatchHotReloadService(HostWorkspaceServices services)
-            => _encService = services.GetRequiredService<IEditAndContinueWorkspaceService>();
+        public WatchHotReloadService(HostWorkspaceServices services, Task<ImmutableArray<string>> getCapabiltiesTask)
+            => (_encService, _getCapabilitiesTask) = (services.GetRequiredService<IEditAndContinueWorkspaceService>(), getCapabiltiesTask);
 
         /// <summary>
         /// Starts the watcher.
@@ -65,7 +65,7 @@ namespace Microsoft.CodeAnalysis.ExternalAccess.Watch.Api
         /// <param name="solution">Solution that represents sources that match the built binaries on disk.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         public async Task StartSessionAsync(Solution solution, CancellationToken cancellationToken)
-            => await _encService.StartDebuggingSessionAsync(solution, DebuggerService.Instance, captureMatchingDocuments: true, cancellationToken).ConfigureAwait(false);
+            => await _encService.StartDebuggingSessionAsync(solution, new DebuggerService(_getCapabilitiesTask), captureMatchingDocuments: true, cancellationToken).ConfigureAwait(false);
 
         /// <summary>
         /// Emits updates for all projects that differ between the given <paramref name="solution"/> snapshot and the one given to the previous successful call or 

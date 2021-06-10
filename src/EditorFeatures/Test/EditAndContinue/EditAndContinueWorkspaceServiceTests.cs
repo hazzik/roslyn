@@ -3574,7 +3574,7 @@ class C
                 loader: new FileTextLoader(sourceFileA.Path, Encoding.UTF8),
                 filePath: sourceFileA.Path));
 
-            var hotReload = new WatchHotReloadService(workspace.Services);
+            var hotReload = new WatchHotReloadService(workspace.Services, Task.FromResult(ImmutableArray.Create("Baseline", "AddDefinitionToExistingType", "NewTypeDefinition")));
 
             await hotReload.StartSessionAsync(solution, CancellationToken.None);
             var debuggingSession = encService.GetTestAccessor().GetDebuggingSession();
