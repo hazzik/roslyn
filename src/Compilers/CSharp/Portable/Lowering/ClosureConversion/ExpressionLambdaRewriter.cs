@@ -1050,7 +1050,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                     case BoundConstantPattern boundConstantPattern:
                         BoundExpression switchCase = ExprFactory("SwitchCase", body,
                             Expressions(ImmutableArray.Create(boundConstantPattern.Value)));
-                        
+
                         if ((object)switchCaseType == null)
                         {
                             switchCaseType = switchCase.Type;
@@ -1066,7 +1066,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 }
             }
 
-            return ExprFactory("Switch", switchValue, defaultBody, 
+            return ExprFactory("Switch", switchValue, defaultBody,
                 _bound.Array(switchCaseType!, switchCases.ToImmutableAndFree()));
         }
 
