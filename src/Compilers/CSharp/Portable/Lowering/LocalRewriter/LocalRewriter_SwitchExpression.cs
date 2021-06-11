@@ -16,6 +16,12 @@ namespace Microsoft.CodeAnalysis.CSharp
     {
         public override BoundNode VisitConvertedSwitchExpression(BoundConvertedSwitchExpression node)
         {
+            if (this._inExpressionLambda)
+            {
+                // The switch expression will be converted by ExpressionLambdaRewriter
+                return node;
+            }
+
             // The switch expression is lowered to an expression that involves the use of side-effects
             // such as jumps and labels, therefore it is represented by a BoundSpillSequence and
             // the resulting nodes will need to be "spilled" to move such statements to the top

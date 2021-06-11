@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
@@ -74,7 +75,7 @@ namespace Microsoft.CodeAnalysis.CSharp
                 return _MemberBindingType;
             }
         }
-
+        
         private readonly NamedTypeSymbol _int32Type;
 
         private readonly NamedTypeSymbol _objectType;
@@ -237,6 +238,8 @@ namespace Microsoft.CodeAnalysis.CSharp
                     return VisitSizeOfOperator((BoundSizeOfOperator)node);
                 case BoundKind.UnaryOperator:
                     return VisitUnaryOperator((BoundUnaryOperator)node);
+                case BoundKind.ConvertedSwitchExpression:
+                    return VisitConvertedSwitch((BoundConvertedSwitchExpression)node);
 
                 case BoundKind.DefaultExpression:
                 case BoundKind.HostObjectMemberReference:
@@ -1030,6 +1033,33 @@ namespace Microsoft.CodeAnalysis.CSharp
             // error should have been reported earlier
             // Diagnostics.Add(ErrorCode.ERR_ExpressionTreeContainsPointerOp, node.Syntax.Location);
             return new BoundBadExpression(node.Syntax, default(LookupResultKind), ImmutableArray<Symbol>.Empty, ImmutableArray.Create<BoundExpression>(node), node.Type);
+        }
+
+        private BoundExpression VisitConvertedSwitch(BoundConvertedSwitchExpression node)
+        {
+            var switchValue = Visit(node.Expression);
+            BoundExpression defaultBody = _bound.Null(ExpressionType);
+            List<BoundExpression> switchCases = new List<BoundExpression>();
+            
+            foreach (BoundSwitchExpressionArm switchArm in node.SwitchArms)
+            {
+                var body = Visit(switchArm.Value);
+                switch (switchArm.Pattern)
+                {
+                    case BoundConstantPattern boundConstantPattern:
+                        switchCases.Add(ExprFactory("SwitchCase", body,
+                            _bound.Array(ExpressionType, ImmutableArray.Create(Visit(boundConstantPattern.Value)))));   
+                        break;
+                    case BoundDiscardPattern:
+                        defaultBody = body;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+
+            return ExprFactory("Switch", switchValue, defaultBody,
+                _bound.Array(switchCases.First().Type!, switchCases.ToImmutableArray()));
         }
 
         private BoundExpression VisitUnaryOperator(BoundUnaryOperator node)

@@ -334,6 +334,26 @@ class ExpressionPrinter : System.Linq.Expressions.ExpressionVisitor
         return null;
     }
 
+    protected override Expression VisitSwitch(SwitchExpression node)
+    {
+        Visit(node.SwitchValue);
+        s.Append("" { "");
+        foreach (var switchCase in node.Cases)
+        {
+            s.Append("" ( Case "");
+            Visit(switchCase.TestValues);
+            s.Append("": "");
+            Visit(switchCase.Body);
+            s.Append("") "");
+        }
+
+        s.Append(""Default: "");
+        Visit(node.DefaultBody);
+
+        s.Append("" } "");
+        return null;
+    }
+
     protected override Expression VisitTypeBinary(TypeBinaryExpression node)
     {
         Visit(node.Expression);
@@ -1788,6 +1808,25 @@ partial class Program : TestBase
                 new[] { text, ExpressionTestLibrary },
                 expectedOutput: @"null
 S");
+        }
+
+        [Fact]
+        public void SwitchExpression()
+        {
+            var text =
+@"using System;
+using System.Linq.Expressions;
+
+partial class Program : TestBase
+{
+    public static void Main(string[] args)
+    {
+        Check<int, string>(x => x switch { 1 => ""1"", _ => ""-1"" }, ""Switch(Parameter(x Type:System.Int32) {  ( Case Constant(1 Type:System.Int32): Constant(1 Type:System.String)) Default: Constant(-1 Type:System.String) }  Type:System.String)"");
+    }
+}";
+            var compilation = CompileAndVerifyUtil(
+                new[] { text, ExpressionTestLibrary },
+                expectedOutput: @"");
         }
 
         #region Regression Tests
