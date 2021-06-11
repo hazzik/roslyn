@@ -1038,28 +1038,36 @@ namespace Microsoft.CodeAnalysis.CSharp
         private BoundExpression VisitConvertedSwitch(BoundConvertedSwitchExpression node)
         {
             var switchValue = Visit(node.Expression);
+            var switchCases = ArrayBuilder<BoundExpression>.GetInstance();
+            TypeSymbol switchCaseType = null;
+
             BoundExpression defaultBody = _bound.Null(ExpressionType);
-            List<BoundExpression> switchCases = new List<BoundExpression>();
-            
             foreach (BoundSwitchExpressionArm switchArm in node.SwitchArms)
             {
                 var body = Visit(switchArm.Value);
                 switch (switchArm.Pattern)
                 {
                     case BoundConstantPattern boundConstantPattern:
-                        switchCases.Add(ExprFactory("SwitchCase", body,
-                            _bound.Array(ExpressionType, ImmutableArray.Create(Visit(boundConstantPattern.Value)))));   
+                        BoundExpression switchCase = ExprFactory("SwitchCase", body,
+                            Expressions(ImmutableArray.Create(boundConstantPattern.Value)));
+                        
+                        if ((object)switchCaseType == null)
+                        {
+                            switchCaseType = switchCase.Type;
+                        }
+
+                        switchCases.Add(switchCase);
                         break;
                     case BoundDiscardPattern:
                         defaultBody = body;
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new InvalidOperationException();
                 }
             }
 
-            return ExprFactory("Switch", switchValue, defaultBody,
-                _bound.Array(switchCases.First().Type!, switchCases.ToImmutableArray()));
+            return ExprFactory("Switch", switchValue, defaultBody, 
+                _bound.Array(switchCaseType!, switchCases.ToImmutableAndFree()));
         }
 
         private BoundExpression VisitUnaryOperator(BoundUnaryOperator node)
