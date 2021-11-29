@@ -1822,6 +1822,7 @@ partial class Program : TestBase
     public static void Main(string[] args)
     {
         Check<int, string>(x => x switch { 1 => ""1"", _ => ""-1"" }, ""Switch(Parameter(x Type:System.Int32) {  ( Case Constant(1 Type:System.Int32): Constant(1 Type:System.String)) Default: Constant(-1 Type:System.String) }  Type:System.String)"");
+        Check<int?, string>(x => x switch { null => ""null"", {} => ""not null"" }, ""Switch(Parameter(x Type:System.Int32) {  ( Case Constant(1 Type:System.Int32): Constant(1 Type:System.String)) Default: Constant(-1 Type:System.String) }  Type:System.String)"");
     }
 }";
             var compilation = CompileAndVerifyUtil(

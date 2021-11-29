@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using Microsoft.CodeAnalysis.CSharp.Symbols;
 using Microsoft.CodeAnalysis.PooledObjects;
 using Roslyn.Utilities;
@@ -1057,6 +1058,12 @@ namespace Microsoft.CodeAnalysis.CSharp
 
                         switchCases.Add(switchCase);
                         break;
+                    case BoundTypePattern boundTypePattern:
+                        Expression.is
+                        boundTypePattern.
+                        break;
+
+
                     case BoundDiscardPattern:
                         defaultBody = body;
                         break;
